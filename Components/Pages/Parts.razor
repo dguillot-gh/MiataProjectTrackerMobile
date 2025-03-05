@@ -10,43 +10,52 @@
         Add New Part
     </button>
 
-    @if (showAddForm)
+    @if (showForm)
     {
-        <div class="add-form">
+        <div class="part-form">
+            <h4>@(isEditing ? "Edit Part" : "Add New Part")</h4>
             <div class="form-group">
                 <label>Name:</label>
-                <input type="text" @bind="newPart.Name" class="form-control" />
+                <input type="text" @bind="currentPart.Name" class="form-control" required />
             </div>
             <div class="form-group">
                 <label>Number:</label>
-                <input type="text" @bind="newPart.Number" class="form-control" />
+                <input type="text" @bind="currentPart.Number" class="form-control" />
             </div>
             <div class="form-group">
                 <label>Cost:</label>
-                <input type="number" @bind="newPart.Cost" class="form-control" />
+                <input type="number" @bind="currentPart.Cost" class="form-control" step="0.01" />
             </div>
             <div class="form-group">
                 <label>Status:</label>
-                <select @bind="newPart.Status" class="form-control">
+                <select @bind="currentPart.Status" class="form-control">
                     <option value="Needed">Needed</option>
                     <option value="Acquired">Acquired</option>
                 </select>
             </div>
             <div class="form-buttons">
-                <button class="btn btn-success" @onclick="AddPart">Save</button>
-                <button class="btn btn-secondary" @onclick="CancelAdd">Cancel</button>
+                <button class="btn btn-success" @onclick="SavePart">Save</button>
+                <button class="btn btn-secondary" @onclick="CancelForm">Cancel</button>
             </div>
         </div>
     }
 
+    <div class="search-box">
+        <input type="text" placeholder="Search parts..." @bind="searchTerm" @bind:event="oninput" class="form-control" />
+    </div>
+
     <div class="parts-grid">
-        @foreach (var part in parts)
+        @foreach (var part in FilteredParts)
         {
             <div class="part-card">
                 <h4>@part.Name</h4>
                 <p>Part Number: @part.Number</p>
                 <p>Cost: $@part.Cost</p>
                 <p>Status: @part.Status</p>
+                <div class="card-actions">
+                    <button class="btn btn-sm btn-primary" @onclick="() => EditPart(part)">Edit</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => DeletePart(part.Id)">Delete</button>
+                </div>
             </div>
         }
     </div>
@@ -61,6 +70,7 @@
         display: grid;
         gap: 16px;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        margin-top: 16px;
     }
 
     .part-card {
@@ -70,7 +80,7 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    .add-form {
+    .part-form {
         background-color: white;
         padding: 16px;
         border-radius: 8px;
@@ -102,6 +112,11 @@
         cursor: pointer;
     }
 
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 0.9em;
+    }
+
     .btn-primary {
         background-color: #512BD4;
         color: white;
@@ -116,33 +131,91 @@
         background-color: #6c757d;
         color: white;
     }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .search-box {
+        margin-bottom: 16px;
+    }
 </style>
 
 @code {
     private List<PartItem> parts = new List<PartItem>();
-    private PartItem newPart = new PartItem();
-    private bool showAddForm = false;
+    private PartItem currentPart = new PartItem();
+    private bool showForm = false;
+    private bool isEditing = false;
+    private string searchTerm = "";
 
     protected override void OnInitialized()
     {
         parts = PartsService.GetParts();
     }
 
+    private List<PartItem> FilteredParts => string.IsNullOrWhiteSpace(searchTerm)
+        ? parts
+        : parts.Where(p =>
+            p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            p.Number.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            p.Status.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
     private void ShowAddForm()
     {
-        showAddForm = true;
-        newPart = new PartItem();
+        isEditing = false;
+        currentPart = new PartItem();
+        showForm = true;
     }
 
-    private void CancelAdd()
+    private void EditPart(PartItem part)
     {
-        showAddForm = false;
+        isEditing = true;
+        currentPart = new PartItem
+            {
+                Id = part.Id,
+                Name = part.Name,
+                Number = part.Number,
+                Cost = part.Cost,
+                Status = part.Status
+            };
+        showForm = true;
     }
 
-    private void AddPart()
+    private void CancelForm()
     {
-        PartsService.AddPart(newPart);
+        showForm = false;
+    }
+
+    private void SavePart()
+    {
+        if (string.IsNullOrWhiteSpace(currentPart.Name))
+        {
+            return; // Basic validation
+        }
+
+        if (isEditing)
+        {
+            PartsService.UpdatePart(currentPart);
+        }
+        else
+        {
+            PartsService.AddPart(currentPart);
+        }
+
         parts = PartsService.GetParts();
-        showAddForm = false;
+        showForm = false;
+    }
+
+    private void DeletePart(int id)
+    {
+        PartsService.DeletePart(id);
+        parts = PartsService.GetParts();
     }
 }
