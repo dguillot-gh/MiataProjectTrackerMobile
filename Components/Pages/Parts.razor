@@ -1,0 +1,148 @@
+@page "/parts"
+@using MiataProjectTracker.Mobile.Models
+@using MiataProjectTracker.Mobile.Services
+@inject PartsService PartsService
+
+<h3>Parts List</h3>
+
+<div class="parts-container">
+    <button class="btn btn-primary mb-3" @onclick="ShowAddForm">
+        Add New Part
+    </button>
+
+    @if (showAddForm)
+    {
+        <div class="add-form">
+            <div class="form-group">
+                <label>Name:</label>
+                <input type="text" @bind="newPart.Name" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Number:</label>
+                <input type="text" @bind="newPart.Number" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Cost:</label>
+                <input type="number" @bind="newPart.Cost" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Status:</label>
+                <select @bind="newPart.Status" class="form-control">
+                    <option value="Needed">Needed</option>
+                    <option value="Acquired">Acquired</option>
+                </select>
+            </div>
+            <div class="form-buttons">
+                <button class="btn btn-success" @onclick="AddPart">Save</button>
+                <button class="btn btn-secondary" @onclick="CancelAdd">Cancel</button>
+            </div>
+        </div>
+    }
+
+    <div class="parts-grid">
+        @foreach (var part in parts)
+        {
+            <div class="part-card">
+                <h4>@part.Name</h4>
+                <p>Part Number: @part.Number</p>
+                <p>Cost: $@part.Cost</p>
+                <p>Status: @part.Status</p>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .parts-container {
+        padding: 16px;
+    }
+
+    .parts-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
+    .part-card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .add-form {
+        background-color: white;
+        padding: 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 16px;
+    }
+
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .form-buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background-color: #512BD4;
+        color: white;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+</style>
+
+@code {
+    private List<PartItem> parts = new List<PartItem>();
+    private PartItem newPart = new PartItem();
+    private bool showAddForm = false;
+
+    protected override void OnInitialized()
+    {
+        parts = PartsService.GetParts();
+    }
+
+    private void ShowAddForm()
+    {
+        showAddForm = true;
+        newPart = new PartItem();
+    }
+
+    private void CancelAdd()
+    {
+        showAddForm = false;
+    }
+
+    private void AddPart()
+    {
+        PartsService.AddPart(newPart);
+        parts = PartsService.GetParts();
+        showAddForm = false;
+    }
+}
