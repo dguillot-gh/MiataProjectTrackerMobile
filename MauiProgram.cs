@@ -24,6 +24,8 @@ namespace MiataProjectTracker.Mobile
             builder.Services.AddSingleton<PartsService>();
             // Add this line to your existing MauiProgram.cs
             builder.Services.AddSingleton<BuildTaskService>();
+            // In Program.cs
+            builder.Services.AddSingleton<BuildLogService>();
 
             return builder.Build();
         }

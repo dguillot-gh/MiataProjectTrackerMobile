@@ -1,5 +1,421 @@
 ﻿@page "/"
+@using MiataProjectTracker.Mobile.Models
+@using MiataProjectTracker.Mobile.Services
+@inject BuildTaskService TaskService
+@inject PartsService PartsService
 
-<h1>Hello, world!</h1>
+<div class="mobile-dashboard">
+    <div class="dashboard-header">
+        <h1>Miata Project</h1>
+        <p class="subtitle">Build Progress</p>
+    </div>
 
-Welcome to your new app.
+    <!-- Stats Cards -->
+    <div class="stats-section">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-content">
+                <h3>Total Parts</h3>
+                <p class="stat-value">@totalParts</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+                <h3>Investment</h3>
+                <p class="stat-value">@totalCost.ToString("C0")</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">🛒</div>
+            <div class="stat-content">
+                <h3>Needed</h3>
+                <p class="stat-value">@partsNeeded</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <h3>Acquired</h3>
+                <p class="stat-value">@partsAcquired</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Info Card -->
+    <div class="dashboard-card">
+        <h3>🚗 Vehicle Information</h3>
+        <div class="details-list">
+            <div class="detail-item">
+                <span class="detail-label">Year:</span>
+                <span class="detail-value">1995</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Model:</span>
+                <span class="detail-value">Miata NA</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Color:</span>
+                <span class="detail-value">Classic Red</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Engine:</span>
+                <span class="detail-value">Stock 1.8L</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Breakdown Card -->
+    <div class="dashboard-card">
+        <h3>📊 Cost Breakdown</h3>
+        <div class="cost-summary">
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Acquired Parts</span>
+                    <span>@acquiredCost.ToString("C0")</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar acquired"
+                         style="width: @(totalCost > 0 ? (acquiredCost/totalCost * 100).ToString("F0") : "0")%">
+                    </div>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Needed Parts</span>
+                    <span>@neededCost.ToString("C0")</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar needed"
+                         style="width: @(totalCost > 0 ? (neededCost/totalCost * 100).ToString("F0") : "0")%">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Build Tasks Summary -->
+    <div class="dashboard-card">
+        <h3>📋 Build Tasks</h3>
+        <div class="task-summary">
+            <div class="task-stat">
+                <span class="task-stat-label">Not Started</span>
+                <span class="task-stat-value">@notStartedCount</span>
+            </div>
+            <div class="task-stat">
+                <span class="task-stat-label">In Progress</span>
+                <span class="task-stat-value">@inProgressCount</span>
+            </div>
+            <div class="task-stat">
+                <span class="task-stat-label">Done</span>
+                <span class="task-stat-value">@doneCount</span>
+            </div>
+        </div>
+        <div class="task-progress">
+            <div class="progress">
+                <div class="progress-bar done"
+                     style="width: @(totalTasks > 0 ? (doneCount * 100 / totalTasks).ToString("F0") : "0")%">
+                </div>
+            </div>
+            <div class="progress-label">
+                <span>Overall Progress</span>
+                <span>@(totalTasks > 0 ? (doneCount * 100 / totalTasks).ToString("F0") : "0")%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .mobile-dashboard {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .dashboard-header {
+        text-align: center;
+        margin-bottom: 8px;
+        padding: 16px;
+        background: linear-gradient(to right, #2d3748, #1a202c);
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+        .dashboard-header h1 {
+            margin: 0;
+            color: #e2e8f0;
+            font-size: 24px;
+        }
+
+    .subtitle {
+        color: #a0aec0;
+        margin-top: 4px;
+        margin-bottom: 0;
+    }
+
+    .stats-section {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .stat-card {
+        background-color: #2d3748;
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .stat-icon {
+        background-color: #4a5568;
+        border-radius: 8px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .stat-content h3 {
+        color: #a0aec0;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .stat-value {
+        color: #e2e8f0;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 4px 0 0 0;
+    }
+
+    .dashboard-card {
+        background-color: #2d3748;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+        .dashboard-card h3 {
+            color: #e2e8f0;
+            margin: 0 0 16px 0;
+            font-size: 18px;
+        }
+
+    .details-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        background-color: #1a202c;
+        border-radius: 6px;
+    }
+
+    .detail-label {
+        color: #a0aec0;
+    }
+
+    .detail-value {
+        color: #e2e8f0;
+        font-weight: 500;
+    }
+
+    .progress-container {
+        margin-bottom: 16px;
+    }
+
+    .progress-label {
+        display: flex;
+        justify-content: space-between;
+        color: #e2e8f0;
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+
+    .progress {
+        background-color: #1a202c;
+        border-radius: 999px;
+        height: 8px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+
+        .progress-bar.acquired {
+            background-color: #065f46;
+        }
+
+        .progress-bar.needed {
+            background-color: #92400e;
+        }
+
+        .progress-bar.done {
+            background-color: #065f46;
+        }
+
+    .activities-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .activity-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        background-color: #1a202c;
+        border-radius: 8px;
+        align-items: center;
+    }
+
+    .activity-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+
+        .activity-icon.status-acquired {
+            background-color: #065f46;
+            color: #d1fae5;
+        }
+
+        .activity-icon.status-needed {
+            background-color: #92400e;
+            color: #fef3c7;
+        }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+
+    .activity-title {
+        color: #e2e8f0;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .activity-cost {
+        color: #a0aec0;
+        font-size: 14px;
+    }
+
+    .activity-details {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .status-badge {
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+        .status-badge.status-acquired {
+            background-color: #065f46;
+            color: #d1fae5;
+        }
+
+        .status-badge.status-needed {
+            background-color: #92400e;
+            color: #fef3c7;
+        }
+
+    .part-number {
+        color: #a0aec0;
+        font-size: 12px;
+    }
+
+    .task-summary {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .task-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #1a202c;
+        padding: 8px;
+        border-radius: 8px;
+        flex: 1;
+        margin: 0 4px;
+    }
+
+    .task-stat-label {
+        color: #a0aec0;
+        font-size: 12px;
+    }
+
+    .task-stat-value {
+        color: #e2e8f0;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .task-progress {
+        margin-top: 8px;
+    }
+</style>
+
+@code {
+    private int totalParts = 0;
+    private decimal totalCost = 0;
+    private int partsNeeded = 0;
+    private int partsAcquired = 0;
+    private decimal acquiredCost = 0;
+    private decimal neededCost = 0;
+
+
+    private int notStartedCount = 0;
+    private int inProgressCount = 0;
+    private int doneCount = 0;
+    private int totalTasks = 0;
+
+    protected override void OnInitialized()
+    {
+
+
+        // Load tasks data
+        var tasks = TaskService.GetTasks();
+        totalTasks = tasks.Count;
+        notStartedCount = tasks.Count(t => t.Status == "Not Started");
+        inProgressCount = tasks.Count(t => t.Status == "In Progress");
+        doneCount = tasks.Count(t => t.Status == "Done");
+    }
+
+    private string GetStatusClass(string? status) => status?.ToLower() switch
+    {
+        "acquired" => "status-acquired",
+        "needed" => "status-needed",
+        _ => "status-default"
+    };
+}
