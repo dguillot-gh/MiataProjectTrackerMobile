@@ -1,0 +1,357 @@
+@page "/archive"
+@using MiataProjectTracker.Mobile.Models
+@using MiataProjectTracker.Mobile.Services
+@inject BuildTaskService TaskService
+
+<h3>Archived Tasks</h3>
+
+<div class="archive-controls">
+    <div class="search-box">
+        <input type="text"
+               placeholder="Search archived tasks..."
+               @bind-value="searchTerm"
+               @bind-value:event="oninput"
+               class="search-input" />
+    </div>
+
+    <div class="filter-controls">
+        <select @bind="selectedCategory" class="filter-select">
+            <option value="">All Categories</option>
+            <option value="Engine">Engine</option>
+            <option value="Suspension">Suspension</option>
+            <option value="Brakes">Brakes</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Interior">Interior</option>
+            <option value="Exterior">Exterior</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <select @bind="sortOption" class="filter-select">
+            <option value="title">Sort by Title</option>
+            <option value="category">Sort by Category</option>
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="archiveDate">Archive Date</option>
+        </select>
+    </div>
+</div>
+
+@if (!FilteredArchivedTasks().Any())
+{
+    <div class="empty-state">
+        <p>No archived tasks found.</p>
+    </div>
+}
+else
+{
+    <div class="archive-list">
+        @foreach (var task in FilteredArchivedTasks())
+        {
+            <div class="task-card">
+                <div class="task-header">
+                    <h4>@task.Title</h4>
+                    <span class="category-badge">@task.Category</span>
+                </div>
+                <p class="task-description">@task.Description</p>
+                <div class="task-tags">
+                    @if (task.PartsNeeded)
+                    {
+                        <span class="tag parts-needed">Parts Needed</span>
+                    }
+                    @if (task.PartsAcquired)
+                    {
+                        <span class="tag parts-acquired">Parts Acquired</span>
+                    }
+                </div>
+                <div class="task-meta">
+                    <span>Archived: @FormatDate(task.ArchivedDate)</span>
+                </div>
+                <div class="task-actions">
+                    <button @onclick="() => UnarchiveTask(task)" class="btn btn-primary">
+                        Restore
+                    </button>
+                    <button @onclick="() => ConfirmDeleteTask(task)" class="btn btn-danger">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (showDeleteConfirm)
+{
+    <div class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4>Confirm Deletion</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to permanently delete this task?</p>
+                    <p class="text-danger">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button @onclick="DeleteTask" class="btn btn-danger">Delete</button>
+                    <button @onclick="CancelDelete" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .archive-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+    }
+
+    .filter-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .filter-select {
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+    }
+
+    .archive-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .task-card {
+        background-color: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .task-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .category-badge {
+        font-size: 0.8em;
+        color: #666;
+        background-color: #eee;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+
+    .task-description {
+        margin: 10px 0;
+        color: #444;
+    }
+
+    .task-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+
+    .tag {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.8em;
+    }
+
+    .parts-needed {
+        background-color: #ffd700;
+    }
+
+    .parts-acquired {
+        background-color: #90EE90;
+    }
+
+    .task-meta {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 10px;
+    }
+
+    .task-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 30px;
+        color: #666;
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-dialog {
+        background-color: white;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 400px;
+        overflow: hidden;
+    }
+
+    .modal-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .modal-body {
+        padding: 15px;
+    }
+
+    .modal-footer {
+        padding: 15px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .text-danger {
+        color: #dc3545;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+
+@code {
+    private List<BuildTask> archivedTasks = new();
+    private string searchTerm = "";
+    private string selectedCategory = "";
+    private string sortOption = "archiveDate";
+    private bool showDeleteConfirm = false;
+    private BuildTask taskToDelete = new();
+
+    protected override void OnInitialized()
+    {
+        LoadArchivedTasks();
+    }
+
+    private void LoadArchivedTasks()
+    {
+        archivedTasks = TaskService.GetArchivedTasks();
+    }
+
+    private IEnumerable<BuildTask> FilteredArchivedTasks()
+    {
+        var filtered = archivedTasks.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            filtered = filtered.Where(t =>
+                t.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.Category.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Apply category filter
+        if (!string.IsNullOrEmpty(selectedCategory))
+        {
+            filtered = filtered.Where(t => t.Category == selectedCategory);
+        }
+
+        // Apply sorting
+        filtered = sortOption switch
+        {
+            "title" => filtered.OrderBy(t => t.Title),
+            "category" => filtered.OrderBy(t => t.Category),
+            "newest" => filtered.OrderByDescending(t => t.Id),
+            "oldest" => filtered.OrderBy(t => t.Id),
+            "archiveDate" => filtered.OrderByDescending(t => t.ArchivedDate),
+            _ => filtered.OrderByDescending(t => t.ArchivedDate)
+        };
+
+        return filtered;
+    }
+
+    private void UnarchiveTask(BuildTask task)
+    {
+        TaskService.UnarchiveTask(task.Id);
+        LoadArchivedTasks();
+    }
+
+    private void ConfirmDeleteTask(BuildTask task)
+    {
+        taskToDelete = task;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+    }
+
+    private void DeleteTask()
+    {
+        TaskService.DeleteTask(taskToDelete.Id);
+        LoadArchivedTasks();
+        showDeleteConfirm = false;
+    }
+
+    // Helper method to format dates
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToString("MMM dd, yyyy") ?? "N/A";
+    }
+}

@@ -1,0 +1,537 @@
+@page "/tracker"
+@using MiataProjectTracker.Mobile.Models
+@using MiataProjectTracker.Mobile.Services
+@inject BuildTaskService TaskService
+
+<h3>Miata Project Tracker</h3>
+
+<div class="top-controls">
+    <div class="search-box">
+        <input type="text"
+               placeholder="Search tasks..."
+               @bind-value="searchTerm"
+               @bind-value:event="oninput"
+               class="search-input" />
+    </div>
+
+    <div class="filter-controls">
+        <select @bind="selectedCategory" class="filter-select">
+            <option value="">All Categories</option>
+            <option value="Engine">Engine</option>
+            <option value="Suspension">Suspension</option>
+            <option value="Brakes">Brakes</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Interior">Interior</option>
+            <option value="Exterior">Exterior</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <select @bind="selectedStatus" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="Not Started">Not Started</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+        </select>
+    </div>
+
+    <button @onclick="ShowAddTaskForm" class="add-button">
+        <span class="plus-icon">+</span> New Task
+    </button>
+</div>
+
+<div class="progress-container">
+    <div class="progress-header">
+        <span>Overall Progress</span>
+        <span>@progressPercentage%</span>
+    </div>
+    <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width: @progressPercentage%;">
+        </div>
+    </div>
+</div>
+<div class="board-tabs">
+    <button class="tab-button @(activeTab == "Not Started" ? "active" : "")" @onclick='() => activeTab = "Not Started"'>
+        Not Started (@FilteredTasks().Count(t => t.Status == "Not Started"))
+    </button>
+    <button class="tab-button @(activeTab == "In Progress" ? "active" : "")" @onclick='() => activeTab = "In Progress"'>
+        In Progress (@FilteredTasks().Count(t => t.Status == "In Progress"))
+    </button>
+    <button class="tab-button @(activeTab == "Done" ? "active" : "")" @onclick='() => activeTab = "Done"'>
+        Done (@FilteredTasks().Count(t => t.Status == "Done"))
+    </button>
+</div>
+
+<div class="task-list">
+    @foreach (var task in FilteredTasks().Where(t => t.Status == activeTab))
+    {
+        <div class="task-card">
+            <div class="task-header">
+                <h4>@task.Title</h4>
+                <span class="category-badge">@task.Category</span>
+            </div>
+            <p class="task-description">@task.Description</p>
+            <div class="task-tags">
+                @if (task.PartsNeeded)
+                {
+                    <span class="tag parts-needed">Parts Needed</span>
+                }
+                @if (task.PartsAcquired)
+                {
+                    <span class="tag parts-acquired">Parts Acquired</span>
+                }
+            </div>
+            <div class="task-actions">
+                <button @onclick="() => EditTask(task)" class="btn btn-sm btn-primary">Edit</button>
+
+                @if (task.Status == "Not Started")
+                {
+                    <button @onclick='() => MoveTask(task, "In Progress")' class="btn btn-sm btn-success">Start</button>
+                }
+                else if (task.Status == "In Progress")
+                {
+                    <button @onclick='() => MoveTask(task, "Done")' class="btn btn-sm btn-success">Complete</button>
+                    <button @onclick='() => MoveTask(task, "Not Started")' class="btn btn-sm btn-secondary">Move Back</button>
+                }
+                else if (task.Status == "Done")
+                {
+                    <button @onclick='() => MoveTask(task, "In Progress")' class="btn btn-sm btn-secondary">Reopen</button>
+                    <button @onclick="() => ArchiveTask(task)" class="btn btn-sm btn-secondary">Archive</button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@if (showTaskForm)
+{
+    <div class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <h4>@(isEditing ? "Edit Task" : "Add New Task")</h4>
+
+                <div class="form-group">
+                    <label>Title:</label>
+                    <input type="text" @bind="currentTask.Title" class="form-control" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea @bind="currentTask.Description" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Category:</label>
+                    <select @bind="currentTask.Category" class="form-control">
+                        <option value="Engine">Engine</option>
+                        <option value="Suspension">Suspension</option>
+                        <option value="Brakes">Brakes</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Interior">Interior</option>
+                        <option value="Exterior">Exterior</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Status:</label>
+                    <select @bind="currentTask.Status" class="form-control">
+                        <option value="Not Started">Not Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Done">Done</option>
+                    </select>
+                </div>
+
+                <div class="form-check">
+                    <label>
+                        <input type="checkbox" @bind="currentTask.PartsNeeded" />
+                        Parts Needed
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <label>
+                        <input type="checkbox" @bind="currentTask.PartsAcquired" />
+                        Parts Acquired
+                    </label>
+                </div>
+
+                <div class="form-buttons">
+                    <button class="btn btn-success" @onclick="SaveTask">Save</button>
+                    <button class="btn btn-secondary" @onclick="CancelTaskForm">Cancel</button>
+                    @if (isEditing)
+                    {
+                        <button class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteConfirm)
+{
+    <div class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <h4>Confirm Delete</h4>
+                <p>Are you sure you want to delete "@currentTask.Title"?</p>
+                <div class="form-buttons">
+                    <button class="btn btn-danger" @onclick="DeleteTask">Delete</button>
+                    <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .top-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .filter-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .filter-select {
+        flex: 1;
+        min-width: 120px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .add-button {
+        padding: 10px;
+        background-color: #512BD4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    .progress-container {
+        margin-bottom: 15px;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+        padding: 10px;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+
+    .progress-bar-bg {
+        background-color: #ddd;
+        height: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        background-color: #28a745;
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+
+    .board-tabs {
+        display: flex;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 10px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+    }
+
+        .tab-button.active {
+            border-bottom-color: #512BD4;
+            font-weight: bold;
+        }
+
+    .task-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .task-card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .task-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+        .task-header h4 {
+            margin: 0;
+        }
+
+    .category-badge {
+        font-size: 0.8em;
+        background-color: #f0f0f0;
+        padding: 3px 8px;
+        border-radius: 12px;
+    }
+
+    .task-description {
+        margin-bottom: 10px;
+    }
+
+    .task-tags {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+
+    .tag {
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+    }
+
+    .parts-needed {
+        background-color: #ffd700;
+    }
+
+    .parts-acquired {
+        background-color: #90EE90;
+    }
+
+    .task-actions {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-dialog {
+        width: 90%;
+        max-width: 500px;
+        background-color: white;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .modal-content {
+        padding: 15px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .form-check {
+        margin-bottom: 10px;
+    }
+
+    .form-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 0.9em;
+    }
+
+    .btn-primary {
+        background-color: #512BD4;
+        color: white;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+
+@code {
+    private List<BuildTask> tasks = new();
+    private BuildTask currentTask = new();
+    private string activeTab = "Not Started";
+    private bool showTaskForm = false;
+    private bool isEditing = false;
+    private bool showDeleteConfirm = false;
+    private string searchTerm = "";
+    private string selectedCategory = "";
+    private string selectedStatus = "";
+
+    private int progressPercentage => tasks.Count > 0
+        ? (int)((float)tasks.Count(t => t.Status == "Done") / tasks.Count * 100)
+        : 0;
+
+    protected override void OnInitialized()
+    {
+        tasks = TaskService.GetTasks();
+    }
+
+    private IEnumerable<BuildTask> FilteredTasks()
+    {
+        var filtered = tasks.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(selectedCategory))
+        {
+            filtered = filtered.Where(t => t.Category == selectedCategory);
+        }
+
+        if (!string.IsNullOrEmpty(selectedStatus))
+        {
+            filtered = filtered.Where(t => t.Status == selectedStatus);
+        }
+
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            filtered = filtered.Where(t =>
+                t.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return filtered.OrderBy(t => t.Title);
+    }
+
+    private void ShowAddTaskForm()
+    {
+        isEditing = false;
+        currentTask = new BuildTask { Status = "Not Started" };
+        showTaskForm = true;
+    }
+
+    private void EditTask(BuildTask task)
+    {
+        isEditing = true;
+        currentTask = new BuildTask
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                Category = task.Category,
+                PartsNeeded = task.PartsNeeded,
+                PartsAcquired = task.PartsAcquired
+            };
+        showTaskForm = true;
+    }
+
+    private void CancelTaskForm()
+    {
+        showTaskForm = false;
+    }
+
+    private void SaveTask()
+    {
+        if (string.IsNullOrWhiteSpace(currentTask.Title))
+            return;
+
+        if (isEditing)
+        {
+            TaskService.UpdateTask(currentTask);
+        }
+        else
+        {
+            TaskService.AddTask(currentTask);
+        }
+
+        tasks = TaskService.GetTasks();
+        showTaskForm = false;
+    }
+
+    private void MoveTask(BuildTask task, string newStatus)
+    {
+        task.Status = newStatus;
+        TaskService.UpdateTask(task);
+        tasks = TaskService.GetTasks();
+    }
+
+    private void ArchiveTask(BuildTask task)
+    {
+        TaskService.ArchiveTask(task.Id);
+        tasks = TaskService.GetTasks();
+    }
+
+    private void ConfirmDelete()
+    {
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+    }
+
+    private void DeleteTask()
+    {
+        TaskService.DeleteTask(currentTask.Id);
+        tasks = TaskService.GetTasks();
+        showDeleteConfirm = false;
+        showTaskForm = false;
+    }
+}
