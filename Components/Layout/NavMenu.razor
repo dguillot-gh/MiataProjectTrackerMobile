@@ -1,37 +1,68 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">MiataProjectTracker.Mobile</a>
+﻿<div class="nav-menu-content">
+    <div class="nav-section">
+        <h3 class="nav-section-title">Main</h3>
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            Dashboard
+        </NavLink>
+        <NavLink class="nav-link" href="tracker">
+            Tasks
+        </NavLink>
+        <NavLink class="nav-link" href="archive">
+            Archive
+        </NavLink>
+    </div>
+
+    <div class="nav-section">
+        <h3 class="nav-section-title">Parts</h3>
+        <NavLink class="nav-link" href="parts">
+            Parts List
+        </NavLink>
+        <NavLink class="nav-link" href="pricetracker">
+            Price Tracker
+        </NavLink>
+    </div>
+
+    <div class="nav-section">
+        <h3 class="nav-section-title">Journal</h3>
+        <NavLink class="nav-link" href="buildlog">
+            Build Log
+        </NavLink>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<style>
+    .nav-menu-content {
+        padding: 16px 0;
+    }
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="tracker">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> BuildTracker
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="parts">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Parts
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="archive">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Archive
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="buildlog">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Build Log
-            </NavLink>
-        </div>
-    </nav>
-</div>
+    .nav-section {
+        margin-bottom: 24px;
+    }
+
+    .nav-section-title {
+        font-size: 14px;
+        text-transform: uppercase;
+        color: #a0aec0;
+        margin: 0 16px 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #4a5568;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        color: #e2e8f0;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+        .nav-link:hover {
+            background-color: #4a5568;
+        }
+
+        .nav-link.active {
+            background-color: #2b6cb0;
+            color: white;
+        }
+</style>

@@ -26,6 +26,8 @@ namespace MiataProjectTracker.Mobile
             builder.Services.AddSingleton<BuildTaskService>();
             // In Program.cs
             builder.Services.AddSingleton<BuildLogService>();
+            // In Program.cs
+            builder.Services.AddSingleton<PriceComparisonService>();
 
             return builder.Build();
         }

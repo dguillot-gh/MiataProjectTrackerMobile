@@ -1,17 +1,256 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager NavigationManager
 
-<div class="page">
-    <div class="sidebar">
+<div class="mobile-page">
+    <header class="app-header">
+        <button class="menu-button" @onclick="ToggleMenu">
+            <span class="menu-icon">Menu</span>
+        </button>
+        <h1 class="app-title">Miata Tracker</h1>
+    </header>
+
+    <div class="@(menuOpen ? "nav-menu open" : "nav-menu")">
+        <div class="nav-header">
+            <h2>Menu</h2>
+            <button class="close-button" @onclick="ToggleMenu">Close</button>
+        </div>
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+    @if (menuOpen)
+    {
+        <div class="menu-backdrop" @onclick="ToggleMenu"></div>
+    }
 
-        <article class="content px-4">
-            @Body
-        </article>
+    <main class="main-content">
+        @Body
     </main>
+    <footer class="app-footer">
+        <nav class="bottom-nav">
+            <a href="/" class="nav-item @(IsActive("/") ? "active" : "")" @onclick="@(e => NavigateTo("/"))">
+                <span class="nav-label">Home</span>
+            </a>
+            <a href="/tracker" class="nav-item @(IsActive("/tracker") ? "active" : "")" @onclick="@(e => NavigateTo("/tracker"))">
+                <span class="nav-label">Tasks</span>
+            </a>
+            <a href="/parts" class="nav-item @(IsActive("/parts") ? "active" : "")" @onclick="@(e => NavigateTo("/parts"))">
+                <span class="nav-label">Parts</span>
+            </a>
+            <a href="/buildlog" class="nav-item @(IsActive("/buildlog") ? "active" : "")" @onclick="@(e => NavigateTo("/buildlog"))">
+                <span class="nav-label">Log</span>
+            </a>
+        </nav>
+    </footer>
 </div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">X</span>
+</div>
+
+<style>
+    .mobile-page {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background-color: #1a202c;
+        color: #e2e8f0;
+    }
+
+    .app-header {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background-color: #2d3748;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .menu-button {
+        background: none;
+        border: none;
+        color: #e2e8f0;
+        font-size: 16px;
+        padding: 4px 8px;
+        margin-right: 16px;
+        cursor: pointer;
+    }
+
+    .app-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100vh;
+        background-color: #2d3748;
+        z-index: 20;
+        transition: left 0.3s ease;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+        overflow-y: auto;
+    }
+
+        .nav-menu.open {
+            left: 0;
+        }
+
+    .menu-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 15;
+    }
+
+    .nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid #4a5568;
+    }
+
+        .nav-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+    .close-button {
+        background: none;
+        border: none;
+        color: #e2e8f0;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    .main-content {
+        flex: 1;
+        padding-bottom: 60px;
+    }
+
+    .app-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #2d3748;
+        box-shadow: 0 -2px 4px rgba(0,0,0,0.2);
+        z-index: 10;
+    }
+
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 0;
+        color: #a0aec0;
+        text-decoration: none;
+        width: 25%;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+        .nav-item.active {
+            color: #90cdf4;
+        }
+
+    .nav-label {
+        font-size: 14px;
+    }
+
+    #blazor-error-ui {
+        background: #2d3748;
+        color: #e2e8f0;
+        bottom: 60px;
+        box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+        display: none;
+        left: 0;
+        padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+        position: fixed;
+        width: 100%;
+        z-index: 1000;
+    }
+
+        #blazor-error-ui .dismiss {
+            cursor: pointer;
+            position: absolute;
+            right: 0.75rem;
+            top: 0.5rem;
+        }
+
+        #blazor-error-ui .reload {
+            color: #90cdf4;
+        }
+</style>
+
+@code {
+    private bool menuOpen = false;
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        menuOpen = false;
+        StateHasChanged();
+    }
+
+    private void ToggleMenu()
+    {
+        menuOpen = !menuOpen;
+    }
+
+    private bool IsActive(string path)
+    {
+        return NavigationManager.Uri.EndsWith(path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void NavigateTo(string path)
+    {
+        menuOpen = false;
+        NavigationManager.NavigateTo(path);
+    }
+
+    private void GoHome()
+    {
+        NavigateTo("/");
+    }
+
+    private void GoToTasks()
+    {
+        NavigateTo("/tracker");
+    }
+
+    private void GoToParts()
+    {
+        NavigateTo("/parts");
+    }
+
+    private void GoToLog()
+    {
+        NavigateTo("/buildlog");
+    }
+}
